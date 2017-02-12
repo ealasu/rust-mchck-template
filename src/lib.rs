@@ -17,6 +17,7 @@ extern crate compiler_builtins;
 #[macro_use]
 extern crate cortex_m;
 extern crate r0;
+extern crate volatile_register;
 
 #[macro_use]
 mod macros;
@@ -24,6 +25,7 @@ mod lang_items;
 
 pub mod exception;
 pub mod interrupt;
+pub mod periph;
 
 // "Pre `main`" initialization routine
 fn init() {}

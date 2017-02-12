@@ -1,50 +1,43 @@
-#![feature(core_intrinsics,asm)]
-#![no_main]
 #![no_std]
+#![no_main]
 
 extern crate board;
+extern crate cortex_m;
 
-use core::intrinsics::volatile_store;
+use board::periph;
+use cortex_m::asm::nop;
 
-macro_rules! GPIO_CONFIG  {() => (0x40048038 as *mut u32);}
-macro_rules! PORTB_PCR16  {() => (0x4004A040 as *mut u32);}
-macro_rules! GPIOB_PDDR   {() => (0x400FF054 as *mut u32);}
-macro_rules! GPIOB_PDOR   {() => (0x400FF040 as *mut u32);}
 const LED_PIN: u32 = 1 << 16; // pin 16
 
 #[no_mangle]
 pub unsafe fn main() -> ! {
-    // Enable system clock on all GPIO ports - page 254
-    *GPIO_CONFIG!() = 0x00043F82; // 0b1000011111110000010
+    // Enable system clock on GPIO port B
+    periph::sim().scgc5.modify(|_,w| w.portb(true));
+
     // Configure the led pin
-    *PORTB_PCR16!() = 0x00000143; // Enables GPIO | DSE | PULL_ENABLE | PULL_SELECT - page 227
+    periph::portb().pcr16.modify(|_, w| w.dse(true).pe(true).ps(true).mux(1));
+
     // Set the led pin to output
-    *GPIOB_PDDR!() = LED_PIN;
+    periph::ptb().pddr.modify(|_, w| w.pdd(LED_PIN));
 
     blink_led();
 }
 
-pub fn led_on() {
-    unsafe {
-        volatile_store(GPIOB_PDOR!(), LED_PIN);
-    }
+fn led_on() {
+    periph::ptb().pdor.modify(|_, w| w.pdo(LED_PIN));
 }
 
-pub fn led_off() {
-    unsafe {
-        volatile_store(GPIOB_PDOR!(), 0x0);
-    }
+fn led_off() {
+    periph::ptb().pdor.modify(|_, w| w.pdo(0));
 }
 
-pub fn delay(ms: i32) {
+fn delay(ms: i32) {
     for _ in 0..ms * 1250 {
-        unsafe {
-            asm!("NOP");
-        }
+        nop();
     }
 }
 
-pub fn blink_led() -> ! {
+fn blink_led() -> ! {
     loop {
         led_on();
         delay(1000);
